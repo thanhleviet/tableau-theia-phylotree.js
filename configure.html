@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Theia Phylotree Configuration</title>
+  <script src="./js/tableau.extensions.1.latest.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      resize: vertical;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: #666;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 30px;
+    }
+
+    button {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-primary {
+      background: #0066cc;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0052a3;
+    }
+
+    .btn-secondary {
+      background: #e0e0e0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #d0d0d0;
+    }
+
+    .example {
+      background: #f8f8f8;
+      padding: 12px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #333;
+      border: 1px solid #e0e0e0;
+    }
+
+    .upload-section {
+      margin-bottom: 15px;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 4px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .upload-label {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #4CAF50;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .upload-label:hover {
+      background: #45a049;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .file-name {
+      margin-left: 10px;
+      color: #666;
+      font-size: 13px;
+    }
+
+    .divider {
+      text-align: center;
+      margin: 20px 0;
+      position: relative;
+      color: #999;
+      font-size: 14px;
+    }
+
+    .divider::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 50%;
+      width: 45%;
+      height: 1px;
+      background: #ddd;
+    }
+
+    .divider::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 50%;
+      width: 45%;
+      height: 1px;
+      background: #ddd;
+    }
+
+    .status {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .status.error {
+      background: #fee;
+      color: #c00;
+      border: 1px solid #fcc;
+      display: block;
+    }
+
+    .status.success {
+      background: #efe;
+      color: #060;
+      border: 1px solid #cfc;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Phylotree Configuration</h2>
+
+    <div class="upload-section">
+      <label class="upload-label" for="fileInput">
+        Upload Newick File
+      </label>
+      <input type="file" id="fileInput" accept=".nwk,.newick,.tree,.txt" />
+      <span class="file-name" id="fileName"></span>
+    </div>
+
+    <div class="divider">OR</div>
+
+    <div class="form-group">
+      <label for="newickInput">Paste Newick Tree String:</label>
+      <textarea
+        id="newickInput"
+        placeholder="Paste your Newick tree string here..."></textarea>
+      <div class="hint">
+        Enter a valid Newick format phylogenetic tree. Leave empty to use the default example tree.
+      </div>
+      <div class="example">
+        <strong>Example:</strong><br>
+        ((A:0.1,B:0.1):0.2,(C:0.15,(D:0.1,E:0.1):0.1):0.15);
+      </div>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <div class="button-group">
+      <button class="btn-primary" onclick="saveSettings()">Save & Close</button>
+      <button class="btn-secondary" onclick="cancel()">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    const newickInput = document.getElementById('newickInput');
+    const fileInput = document.getElementById('fileInput');
+    const fileNameSpan = document.getElementById('fileName');
+    const statusDiv = document.getElementById('status');
+
+    fileInput.addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (!file) {
+        fileNameSpan.textContent = '';
+        return;
+      }
+
+      fileNameSpan.textContent = file.name;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        newickInput.value = content;
+        showStatus('File loaded successfully', false);
+      };
+      reader.onerror = function() {
+        showStatus('Failed to read file', true);
+      };
+      reader.readAsText(file);
+    });
+
+    function showStatus(message, isError = false) {
+      statusDiv.textContent = message;
+      statusDiv.className = 'status ' + (isError ? 'error' : 'success');
+      setTimeout(() => {
+        statusDiv.className = 'status';
+      }, 3000);
+    }
+
+    async function initializeConfig() {
+      try {
+        await tableau.extensions.initializeDialogAsync();
+
+        const settings = tableau.extensions.settings.getAll();
+        if (settings.newickTree) {
+          newickInput.value = settings.newickTree;
+        }
+      } catch (error) {
+        console.error('Failed to initialize configuration:', error);
+        showStatus('Failed to initialize: ' + error.message, true);
+      }
+    }
+
+    function validateNewick(newick) {
+      if (!newick || newick.trim() === '') {
+        return true;
+      }
+
+      const trimmed = newick.trim();
+
+      if (!trimmed.endsWith(';')) {
+        return 'Newick string must end with a semicolon (;)';
+      }
+
+      const openParens = (trimmed.match(/\(/g) || []).length;
+      const closeParens = (trimmed.match(/\)/g) || []).length;
+
+      if (openParens !== closeParens) {
+        return 'Mismatched parentheses in Newick string';
+      }
+
+      return true;
+    }
+
+    async function saveSettings() {
+      try {
+        const newick = newickInput.value.trim();
+
+        const validation = validateNewick(newick);
+        if (validation !== true) {
+          showStatus(validation, true);
+          return;
+        }
+
+        tableau.extensions.settings.set('newickTree', newick);
+        await tableau.extensions.settings.saveAsync();
+
+        tableau.extensions.ui.closeDialog('success');
+      } catch (error) {
+        console.error('Failed to save settings:', error);
+        showStatus('Failed to save: ' + error.message, true);
+      }
+    }
+
+    function cancel() {
+      tableau.extensions.ui.closeDialog('cancel');
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initializeConfig);
+    } else {
+      initializeConfig();
+    }
+  </script>
+</body>
+</html>
